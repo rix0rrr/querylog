@@ -4,7 +4,9 @@ import os
 import threading
 import time
 
-from . import log_queue
+
+from .log_queue import LogQueue
+
 
 IS_WINDOWS = os.name == "nt"
 if not IS_WINDOWS:
@@ -14,7 +16,8 @@ if not IS_WINDOWS:
 class LogRecord:
     """A log record."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, queue=None, **kwargs):
+        self.queue = queue or LOG_QUEUE
         self.start_time = time.time()
 
         if not IS_WINDOWS:
@@ -24,6 +27,7 @@ class LogRecord:
         loadavg = os.getloadavg()[0] if not IS_WINDOWS else None
         self.set(start_time=dtfmt(self.start_time), pid=os.getpid(), loadavg=loadavg, fault=0)
 
+        # If running on Heroku
         dyno = os.getenv("DYNO")
         if dyno:
             self.set(dyno=dyno)
@@ -54,7 +58,7 @@ class LogRecord:
         # There should be 0, but who knows
         self._terminate_running_timers()
 
-        LOG_QUEUE.add(self.as_data())
+        self.queue.submit(self.as_data())
 
     def set(self, **kwargs):
         """Set keys based on keyword arguments."""
@@ -140,88 +144,6 @@ class NullRecord(LogRecord):
         self.set(fault=1, error_message=str(exc))
 
 
-THREAD_LOCAL = threading.local()
-THREAD_LOCAL.current_log_record = NullRecord()
-
-
-def begin_global_log_record(**kwargs):
-    """Open a new global log record with the given attributes."""
-    THREAD_LOCAL.current_log_record = LogRecord(**kwargs)
-
-
-def read_global_log_record():
-    """Read the current global log record."""
-    return THREAD_LOCAL.current_log_record.as_data()
-
-
-def finish_global_log_record(exc=None):
-    """Finish the global log record, and return it."""
-    try:
-        # When developing, this can sometimes get called before 'current_log_record' has been set.
-        if hasattr(THREAD_LOCAL, "current_log_record"):
-            record = THREAD_LOCAL.current_log_record
-            if exc:
-                record.record_exception(exc)
-            record.finish()
-            return record
-        return NullRecord()
-    finally:
-        THREAD_LOCAL.current_log_record = NullRecord()
-
-
-def log_value(**kwargs):
-    """Log values into the currently globally active Log Record."""
-    if hasattr(THREAD_LOCAL, "current_log_record"):
-        # For some malformed URLs, the records are not initialized,
-        # so we check whether there's a current_log_record
-        THREAD_LOCAL.current_log_record.set(**kwargs)
-
-
-def log_time(name):
-    """Log a time into the currently globally active Log Record."""
-    return THREAD_LOCAL.current_log_record.timer(name)
-
-
-def log_counter(name, count=1):
-    """Increase the count of something in the currently globally active Log Record."""
-    return THREAD_LOCAL.current_log_record.inc(name, count)
-
-
-def timed(fn):
-    """Function decorator to make the given function timed into the currently active log record."""
-
-    @functools.wraps(fn)
-    def wrapped(*args, **kwargs):
-        with log_time(fn.__name__):
-            return fn(*args, **kwargs)
-
-    return wrapped
-
-
-def timed_as(name):
-    """Function decorator to make the given function timed into the currently active log record.
-
-    Use a different name from the actual function name.
-    """
-
-    def decoractor(fn):
-        @functools.wraps(fn)
-        def wrapped(*args, **kwargs):
-            with log_time(name):
-                return fn(*args, **kwargs)
-
-        return wrapped
-
-    return decoractor
-
-
-def emergency_shutdown():
-    """The process is being killed. Do whatever needs to be done to save the logs."""
-    THREAD_LOCAL.current_log_record.set(terminated=True)
-    THREAD_LOCAL.current_log_record.finish()
-    LOG_QUEUE.emergency_save_to_disk()
-
-
 def dtfmt(timestamp):
     dt = datetime.datetime.utcfromtimestamp(timestamp)
     return dt.isoformat() + "Z"
@@ -256,5 +178,13 @@ def ms_from_fsec(x):
     return int(x * 1000)
 
 
-LOG_QUEUE = log_queue.LogQueue("querylog", batch_window_s=300)
-LOG_QUEUE.try_load_emergency_saves()
+LOG_QUEUE = LogQueue("querylog", batch_window_s=300)
+
+def set_default_log_queue(log_queue: LogQueue):
+    global LOG_QUEUE
+    log_queue.stop()
+    LOG_QUEUE = log_queue
+
+
+def get_default_log_queue():
+    return LOG_QUEUE

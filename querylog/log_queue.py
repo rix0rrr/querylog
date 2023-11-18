@@ -7,8 +7,7 @@ import threading
 import time
 import traceback
 
-logger = logging.getLogger(__name__)
-
+from .sinks import DefaultSink
 
 class LogQueue:
     """A queue of records that still need to be written out.
@@ -20,7 +19,7 @@ class LogQueue:
           300               600               900
          |   x    x x      |             x   |
        --+-----------------+-----------------+---------
-          ^                 ^                 ^
+          ↑                 ↑                 ↑
         wake               wake              wake
 
     Upon 'wake' events (every batch window seconds), a background thread
@@ -31,34 +30,40 @@ class LogQueue:
     to allow for maximum parallelism.
     """
 
-    def __init__(self, name, batch_window_s, do_print=False):
+    def __init__(self, name, batch_window_s):
         self.name = name
         self.records_queue = collections.defaultdict(list)
         self.batch_window_s = batch_window_s
-        self.transmitter = None
-        self.do_print = do_print
+        self.sink = DefaultSink()
         self.mutex = threading.Lock()
+        self.running = True
+        self.wake_event = threading.Event()
         self.thread = threading.Thread(target=self._write_thread, name=f"{name}Writer", daemon=True)
         self.thread.start()
 
-    def add(self, data):
-        bucket = div_clip(time.time(), self.batch_window_s)
+    def stop(self):
+        self.running = False
+        self.event.set()
 
-        if self.do_print:
-            logger.debug(repr(data))
+    def submit(self, data):
+        bucket = div_clip(time.time(), self.batch_window_s)
 
         with self.mutex:
             self.records_queue[bucket].append(data)
 
-    def set_transmitter(self, transmitter):
+    def set_sink(self, sink):
         """Configure a function that will be called for every set of records.
 
-        The function looks like:
+        The sink should be a callable object that looks like:
 
-            def transmitter(timestamp, records) -> Boolean:
+            def sink(timestamp, records) -> Boolean:
                 ...
+
+        If this function returns `False`, we assume that saving/transmitting
+        the records failed, and it will be retried in the future. If True
+        or None is returned, the records will be purged.
         """
-        self.transmitter = transmitter
+        self.sink = sink
 
     def emergency_save_to_disk(self):
         """Save all untransmitted records to disk.
@@ -107,7 +112,7 @@ class LogQueue:
             except OSError:
                 pass
 
-    def transmit_now(self, max_time=None):
+    def flush(self, max_time=None):
         """(Try to) transmit all pending records with recording timestamps
         smaller than the given time now."""
         with self.mutex:
@@ -126,30 +131,28 @@ class LogQueue:
             # throw or return False, depending on how loud it wants to be).
             success = self._save_records(bucket_ts, bucket_records)
 
-            # Only remove them from the queue if sending didn't fail
+            # Remove them from the queue if sending didn't fail
             if success is not False:
                 with self.mutex:
                     del self.records_queue[bucket_ts]
 
     def _save_records(self, timestamp, records):
-        if self.transmitter:
-            return self.transmitter(timestamp, records)
-        else:
-            count = len(records)
-            logger.warning(f"No querylog transmitter configured, {count} records dropped")
+          return self.sink(timestamp, records)
 
     def _write_thread(self):
         """Background thread which will wake up every batch_window_s seconds
         to emit records from the queue."""
         next_wake = div_clip(time.time(), self.batch_window_s) + self.batch_window_s
-        while True:
+        while self.running:
             try:
-                # Wait for next wake time
-                time.sleep(max(0, next_wake - time.time()))
+                # Interruptible sleep for next wake time
+                self.wake_event.wait(timeout=max(0, next_wake - time.time()))
+                if not self.running:
+                    break
 
                 # Once woken, see what buckets we have left to push (all buckets
                 # with numbers lower than next_wake)
-                self.transmit_now(next_wake)
+                self.flush(next_wake)
             except Exception:
                 traceback.print_exc()
             next_wake += self.batch_window_s
