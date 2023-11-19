@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "requestlog"
-version = "0.1.0"
+version = "v0.1.1"
 description = "Structured request logging in Python"
 authors = ["Rico Hermans <rix0rrr@gmail.com>"]
 license = "MIT"
