@@ -1,9 +1,14 @@
-name: CI
-on: pull_request
+name: Build and publish python package
+
+on:
+  release:
+    types: [ published ]
 
 jobs:
-  test:
+  publish-service-client-package:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v2
@@ -15,3 +20,8 @@ jobs:
         run: poetry install
       - name: Test
         run: poetry run pytest
+      - name: Publish PyPI package
+        uses: code-specialist/pypi-poetry-publish@v1
+        with:
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_REGISTRY_PASSWORD: ${{ secrets.PYPI_TOKEN }}

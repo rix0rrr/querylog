@@ -7,3 +7,7 @@ Mostly notes for myself because I don't use these tools that often :).
 ```sh
 $ python3 -m poetry run pytest
 ```
+
+## Releasing
+
+Create a new GitHub release, and the workflow will do the rest.
