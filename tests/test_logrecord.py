@@ -3,6 +3,7 @@ import unittest
 import querylog
 
 from .base_test import QueryLogSuite
+from . import submodule
 
 class TestQueryLog(QueryLogSuite):
     def test_with_statement(self):
@@ -22,3 +23,24 @@ class TestQueryLog(QueryLogSuite):
         self.assertEqual(len(self.records), 1)
         self.assertIn('something_ms', self.records[0])
         self.assertIn('something_cnt', self.records[0])
+
+    def test_exception(self):
+        try:
+            with querylog.LogRecord() as record:
+                raise ValueError('Wrong wrong wrong')
+        except:
+            pass
+
+        self.assertEqual(self.records[0]['fault'], 1)
+        self.assertEqual(self.records[0]['error_message'], 'Wrong wrong wrong')
+        self.assertEqual(self.records[0]['error_class'], 'ValueError')
+
+    def test_exception2(self):
+        try:
+            with querylog.LogRecord() as record:
+                raise submodule.MyException('Oops')
+        except:
+            pass
+
+        self.assertEqual(self.records[0]['fault'], 1)
+        self.assertEqual(self.records[0]['error_class'], 'tests.submodule.MyException')

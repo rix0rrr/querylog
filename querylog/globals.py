@@ -69,6 +69,11 @@ def log_counter(name, count=1):
     return _get_current_record().inc(name, count)
 
 
+def log_counters(**kwargs):
+    """Use keyword args to log counters."""
+    return _get_current_record().inc_all(name, count)
+
+
 def emergency_shutdown():
     """The process is being killed. Save the logs to disk."""
     _get_current_record().set(terminated=True)
@@ -76,11 +81,14 @@ def emergency_shutdown():
     get_default_log_queue().emergency_save_to_disk()
 
 
-def initialize(name="querylog", batch_window_s=300, load_emergency_saves=True, sink=None):
+def initialize(name="querylog", batch_window_s=0, load_emergency_saves=True, sink=None):
     """Initialize the global log record.
 
-    Changes the name or batch window, and loads old records saved by
+    Configures the name and batch window, and loads old records saved by
     'emergency_shutdown'.
+
+    A batch window of 0 (default) will lead to records being transmitted
+    as soon as they are enqueued.
     """
     queue = get_default_log_queue()
     if name != queue.name or batch_window_s != queue.batch_window_s:

@@ -12,6 +12,13 @@ IS_WINDOWS = os.name == "nt"
 if not IS_WINDOWS:
     import resource
 
+    preferred_rusage = resource.RUSAGE_SELF
+    try:
+        preferred_rusage = resource.RUSAGE_THREAD
+    except:
+        # Not on a platform that supports RUSAGE_THREAD
+        pass
+
 
 class LogRecord:
     """A log record."""
@@ -77,12 +84,16 @@ class LogRecord:
         else:
             self.attributes[name] = amount
 
+    def inc_all(self, **kwargs):
+        for key, value in kwargs.items():
+            self.inc(key, value)
+
     def inc_timer(self, name, time_ms):
         self.inc(name + "_ms", time_ms)
         self.inc(name + "_cnt")
 
     def record_exception(self, exc):
-        self.set(fault=1, error_message=str(exc))
+        self.set(fault=1, error_class=get_full_class_name(exc), error_message=str(exc))
 
     def as_data(self):
         return self.attributes
@@ -178,7 +189,7 @@ def ms_from_fsec(x):
     return int(x * 1000)
 
 
-LOG_QUEUE = LogQueue("querylog", batch_window_s=300)
+LOG_QUEUE = LogQueue("querylog", batch_window_s=0)
 
 def set_default_log_queue(log_queue: LogQueue):
     global LOG_QUEUE
@@ -188,3 +199,10 @@ def set_default_log_queue(log_queue: LogQueue):
 
 def get_default_log_queue():
     return LOG_QUEUE
+
+
+def get_full_class_name(obj):
+    module = obj.__class__.__module__
+    if module is None or module == str.__class__.__module__:
+        return obj.__class__.__name__
+    return module + '.' + obj.__class__.__name__

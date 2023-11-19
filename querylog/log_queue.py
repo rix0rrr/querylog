@@ -38,8 +38,17 @@ class LogQueue:
         self.mutex = threading.Lock()
         self.running = True
         self.wake_event = threading.Event()
-        self.thread = threading.Thread(target=self._write_thread, name=f"{name}Writer", daemon=True)
-        self.thread.start()
+        self.thread = None
+
+    def _lazy_start_thread(self):
+        """Start the thread if not started yet.
+
+        Do this lazily so we don't add a thread to programs that
+        accidentally use this library.
+        """
+        if not self.thread:
+            self.thread = threading.Thread(target=self._write_thread, name=f"{self.name}Writer", daemon=True)
+            self.thread.start()
 
     def stop(self):
         self.running = False
@@ -50,6 +59,11 @@ class LogQueue:
 
         with self.mutex:
             self.records_queue[bucket].append(data)
+
+        if self.batch_window_s == 0:
+            self.flush()
+        else:
+            self._lazy_start_thread()
 
     def set_sink(self, sink):
         """Configure a function that will be called for every set of records.
@@ -159,5 +173,10 @@ class LogQueue:
 
 
 def div_clip(x, y):
-    """Return the highest value < x that's a multiple of y."""
+    """Return the highest value < x that's a multiple of y.
+
+    Make an exception for y == 0, in which case we just return x.
+    """
+    if y == 0:
+        return x
     return int(x // y) * y

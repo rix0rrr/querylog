@@ -28,10 +28,10 @@ class DefaultSink(PrintSink):
         self.warn = True
 
     def __call__(self, ts, records):
-        if warn:
+        if self.warn:
             self.stream.write('WARNING: No sink configured for querylog. Call \'querylog.initialize(sink=...)\'')
             self.warn = False
-        super()(ts, records)
+        super().__call__(ts, records)
 
 
 class LoggerSink:
