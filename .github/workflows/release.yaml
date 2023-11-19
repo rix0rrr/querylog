@@ -5,10 +5,8 @@ on:
     types: [ published ]
 
 jobs:
-  publish-service-client-package:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Install Poetry
@@ -17,6 +15,12 @@ jobs:
         run: poetry install
       - name: Test
         run: poetry run pytest
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Publish PyPI package
         uses: code-specialist/pypi-poetry-publish@v1
         with:
