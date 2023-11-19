@@ -257,3 +257,4 @@ def s3_sink(timestamp, records):
         Body=body
     )
 ```
+
