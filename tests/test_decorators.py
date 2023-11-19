@@ -1,29 +1,29 @@
 import unittest
 import time
 
-import querylog
+import requestlog
 
-from .base_test import QueryLogSuite
+from .base_test import RequestLogSuite
 
-class TestQueryLog(QueryLogSuite):
+class TestRequestLog(RequestLogSuite):
     def test_decorator_one(self):
-        with querylog.begin_global_log_record():
+        with requestlog.begin_global_log_record():
             timed_function()
 
         self.assertIn('timed_function_ms', self.records[0])
 
     def test_decorator_two(self):
-        with querylog.begin_global_log_record():
+        with requestlog.begin_global_log_record():
             timed_function_2()
 
         self.assertIn('sleepy_ms', self.records[0])
 
 
-@querylog.timed
+@requestlog.timed
 def timed_function():
     time.sleep(0.01)
 
 
-@querylog.timed_as('sleepy')
+@requestlog.timed_as('sleepy')
 def timed_function_2():
     time.sleep(0.01)

@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "querylog"
+name = "requestlog"
 version = "0.1.0"
 description = "Structured request logging in Python"
 authors = ["Rico Hermans <rix0rrr@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "querylog"}]
+packages = [{include = "requestlog"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"

@@ -1,4 +1,4 @@
-Querylog
+Requestlog
 =========
 
 A library for recording structured log data, with a focus on performance data.
@@ -11,12 +11,12 @@ of structured data. If multiple operations are happening in parallel like in a
 web server, the log lines from different requests will mix and it might be hard
 to find the information for any particular user request.
 
-In contrast, in `querylog` you define the scope of a logging operation (typically
+In contrast, in `requestlog` you define the scope of a logging operation (typically
 a scope corresponds to a server request), and all log entries are collected
 together in a single dictionary object, so that all information pertaining to a
 single server request is collected together.
 
-`querylog` can store arbitrary keys and values (like `path`, `client_ip` and
+`requestlog` can store arbitrary keys and values (like `path`, `client_ip` and
 `status_code`), but is particularly optimized for storing performance-related
 information: timers and counters. This helps answer questions like *"For this
 particular web request, how many calls were done to the database?"*, *"How long
@@ -25,17 +25,17 @@ did those calls take?"*, and *"How many records were returned?"*.
 API
 ---
 
-The easiest API to `querylog` is the global API:
+The easiest API to `requestlog` is the global API:
 
 ```py
-import querylog
+import requestlog
 
 # Begin and end a query log scope
-querylog.begin_global_log_record()
-querylog.end_global_log_record()
+requestlog.begin_global_log_record()
+requestlog.end_global_log_record()
 
 # You can also use it as a context object
-with querylog.begin_global_log_record():
+with requestlog.begin_global_log_record():
   # ... code to measure here ...
   pass
 ```
@@ -43,34 +43,34 @@ with querylog.begin_global_log_record():
 To log values into the log record, call these functions:
 
 ```py
-import querylog
+import requestlog
 
-with querylog.begin_global_log_record():
+with requestlog.begin_global_log_record():
 
     # Log keys and values
-    querylog.log_value(status_code='200', path='/user')
+    requestlog.log_value(status_code='200', path='/user')
 
     # Counters have the property that they add up. The code below
     # will end up with 'records=7'.
-    querylog.log_counter('records', 5)
-    querylog.log_counter('records', 2)
+    requestlog.log_counter('records', 5)
+    requestlog.log_counter('records', 2)
 
     # You can also use log_counters, which takes keyword arguments
-    querylog.log_counters(records=5)
-    querylog.log_counters(records=2)
+    requestlog.log_counters(records=5)
+    requestlog.log_counters(records=2)
 
     # Timers are context objects. They will log the following keys:
     # '{name}_cnt' and '{name}_ms', which are the number of times
     # a timer with this name has been logged, and the total time spent
     # in all of them, respectively.
-    with querylog.log_time('database'):
+    with requestlog.log_time('database'):
         time.sleep(1)
 ```
 
 Automatically logged data
 -------------------------
 
-`querylog` logs a bunch of fields into every record by default. These are:
+`requestlog` logs a bunch of fields into every record by default. These are:
 
 | Field | Contents |
 |-------|----------|
@@ -95,26 +95,26 @@ Here is an example of how to integrate this with Flask, so that a log record is
 produced for every Flask request.
 
 > [!INFO]
-> Since `querylog` uses thread-local storage by default, this assumes you are
+> Since `requestlog` uses thread-local storage by default, this assumes you are
 using threaded mode or running in a process-per-server model like `gunicorn`.
-If you are using greenlets, call `querylog.globals.set_context_object()`
+If you are using greenlets, call `requestlog.globals.set_context_object()`
 to store the global log record elsewhere.
 
 Add the following to your main Flask application:
 
 ```py
 # app.py
-import querylog
+import requestlog
 
 # Initialize logging, load any emergency records
-querylog.initialize(sink=...)
+requestlog.initialize(sink=...)
 
 
 @app.before_request
 def before_request_begin_logging():
     path = (str(request.path) + '?' + request.query_string.decode('utf-8')
             ) if request.query_string else str(request.path)
-    querylog.begin_global_log_record(
+    requestlog.begin_global_log_record(
         path=path,
         method=request.method,
         remote_ip=request.headers.get('X-Forwarded-For', request.remote_addr),
@@ -123,25 +123,25 @@ def before_request_begin_logging():
 
 @app.after_request
 def after_request_log_status(response):
-    querylog.log_value(http_code=response.status_code)
+    requestlog.log_value(http_code=response.status_code)
     return response
 
 
 @app.teardown_request
 def teardown_request_finish_logging(exc):
-    querylog.finish_global_log_record(exc)
+    requestlog.finish_global_log_record(exc)
 ```
 
 If you are using `gunicorn`, add the following to `gunicorn.conf.py` to
 make sure that on server shutdown, any untransmitted records are saved
 to disk. They will be automatically loaded and re-enqueued when
-`querylog.initialize()` is called after the server is restarted.
+`requestlog.initialize()` is called after the server is restarted.
 
 ```py
 # gunicorn.conf.py
 def worker_exit(server, worker):
-    import querylog
-    querylog.emergency_shutdown()
+    import requestlog
+    requestlog.emergency_shutdown()
 ```
 
 Sinks
@@ -163,12 +163,12 @@ def my_sink(timestamp: int, records: list[dict]):
     pass
 ```
 
-You configure the sink by calling `querylog.initialize()`:
+You configure the sink by calling `requestlog.initialize()`:
 
 ```py
-import querylog
+import requestlog
 
-querylog.initialize(
+requestlog.initialize(
     batch_window_s=300,
     sink=my_sink)
 ```

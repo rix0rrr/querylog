@@ -29,7 +29,7 @@ class DefaultSink(PrintSink):
 
     def __call__(self, ts, records):
         if self.warn:
-            self.stream.write('WARNING: No sink configured for querylog. Call \'querylog.initialize(sink=...)\'')
+            self.stream.write('WARNING: No sink configured for requestlog. Call requestlog.initialize(sink=...)\n')
             self.warn = False
         super().__call__(ts, records)
 
@@ -37,7 +37,7 @@ class DefaultSink(PrintSink):
 class LoggerSink:
     """A sink that logs to a Python logger."""
     def __init__(self, logger=None):
-        self.logger = logger or logging.getLogger('querylog')
+        self.logger = logger or logging.getLogger('requestlog')
 
     def __call__(self, ts, records):
         for record in records:

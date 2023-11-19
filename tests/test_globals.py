@@ -1,16 +1,16 @@
 import unittest
 
-import querylog
+import requestlog
 
-from .base_test import QueryLogSuite
+from .base_test import RequestLogSuite
 
 
-class TestQueryLog(QueryLogSuite):
+class TestGlobals(RequestLogSuite):
     def test_globals(self):
         """Test the globals interface."""
-        querylog.start_global_log_record(banaan='geel')
-        querylog.log_value(bloem='rood')
-        querylog.finish_global_log_record()
+        requestlog.start_global_log_record(banaan='geel')
+        requestlog.log_value(bloem='rood')
+        requestlog.finish_global_log_record()
 
         self.assertEqual(len(self.records), 1)
         self.assertEqual(self.records[0]['banaan'], 'geel')

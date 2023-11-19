@@ -38,21 +38,13 @@ class LogQueue:
         self.mutex = threading.Lock()
         self.running = True
         self.wake_event = threading.Event()
-        self.thread = None
-
-    def _lazy_start_thread(self):
-        """Start the thread if not started yet.
-
-        Do this lazily so we don't add a thread to programs that
-        accidentally use this library.
-        """
-        if not self.thread:
+        if self.batch_window_s > 0:
             self.thread = threading.Thread(target=self._write_thread, name=f"{self.name}Writer", daemon=True)
             self.thread.start()
 
     def stop(self):
         self.running = False
-        self.event.set()
+        self.wake_event.set()
 
     def submit(self, data):
         bucket = div_clip(time.time(), self.batch_window_s)
@@ -62,8 +54,6 @@ class LogQueue:
 
         if self.batch_window_s == 0:
             self.flush()
-        else:
-            self._lazy_start_thread()
 
     def set_sink(self, sink):
         """Configure a function that will be called for every set of records.

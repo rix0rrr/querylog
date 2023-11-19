@@ -1,14 +1,14 @@
 import unittest
 
-import querylog
+import requestlog
 
-from .base_test import QueryLogSuite
+from .base_test import RequestLogSuite
 from . import submodule
 
-class TestQueryLog(QueryLogSuite):
+class TestRequestLog(RequestLogSuite):
     def test_with_statement(self):
         """Test a 'with' statement."""
-        with querylog.LogRecord(banaan='geel') as record:
+        with requestlog.LogRecord(banaan='geel') as record:
             record.set(bloem='rood')
 
         self.assertEqual(len(self.records), 1)
@@ -16,7 +16,7 @@ class TestQueryLog(QueryLogSuite):
         self.assertEqual(self.records[0]['bloem'], 'rood')
 
     def test_timer(self):
-        with querylog.LogRecord(banaan='geel') as record:
+        with requestlog.LogRecord(banaan='geel') as record:
             with record.timer('something'):
                 record.set(bloem='rood')
 
@@ -26,7 +26,7 @@ class TestQueryLog(QueryLogSuite):
 
     def test_exception(self):
         try:
-            with querylog.LogRecord() as record:
+            with requestlog.LogRecord() as record:
                 raise ValueError('Wrong wrong wrong')
         except:
             pass
@@ -37,7 +37,7 @@ class TestQueryLog(QueryLogSuite):
 
     def test_exception2(self):
         try:
-            with querylog.LogRecord() as record:
+            with requestlog.LogRecord() as record:
                 raise submodule.MyException('Oops')
         except:
             pass

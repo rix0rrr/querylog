@@ -1,13 +1,13 @@
 import unittest
 
-import querylog
+import requestlog
 
 
-class QueryLogSuite(unittest.TestCase):
+class RequestLogSuite(unittest.TestCase):
     def setUp(self):
         self._records = []
         self.auto_flush = True
-        querylog.initialize(sink=self._fake_sink)
+        requestlog.initialize(sink=self._fake_sink)
 
     def _fake_sink(self, ts, records):
         self._records.extend(records)
@@ -16,5 +16,5 @@ class QueryLogSuite(unittest.TestCase):
     def records(self):
         if self.auto_flush:
             self.auto_flush = False
-            querylog.flush()
+            requestlog.flush()
         return self._records

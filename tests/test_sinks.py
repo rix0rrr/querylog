@@ -1,27 +1,27 @@
 import logging
 import unittest
 
-import querylog
+import requestlog
 
 
 class TestSinks(unittest.TestCase):
   def test_defaultsink(self):
-    querylog.initialize(sink=querylog.sinks.DefaultSink())
+    requestlog.initialize(sink=requestlog.sinks.DefaultSink())
     self.log_something()
 
   def test_buffersink(self):
-    querylog.initialize(sink=querylog.sinks.BufferSink())
+    requestlog.initialize(sink=requestlog.sinks.BufferSink())
     self.log_something()
 
   def test_printsink(self):
-    querylog.initialize(sink=querylog.sinks.PrintSink())
+    requestlog.initialize(sink=requestlog.sinks.PrintSink())
     self.log_something()
 
   def test_loggersink(self):
-    querylog.initialize(sink=querylog.sinks.LoggerSink(logging.getLogger('test')))
+    requestlog.initialize(sink=requestlog.sinks.LoggerSink(logging.getLogger('test')))
     self.log_something()
 
   def log_something(self):
-    with querylog.begin_global_log_record():
+    with requestlog.begin_global_log_record():
       pass
-    querylog.flush()
+    requestlog.flush()

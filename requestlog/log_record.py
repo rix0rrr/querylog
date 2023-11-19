@@ -67,6 +67,10 @@ class LogRecord:
 
         self.queue.submit(self.as_data())
 
+    def log_value(self, **kwargs):
+        """Set keys based on keyword arguments."""
+        self.set(**kwargs)
+
     def set(self, **kwargs):
         """Set keys based on keyword arguments."""
         self.attributes.update(kwargs)
@@ -189,7 +193,7 @@ def ms_from_fsec(x):
     return int(x * 1000)
 
 
-LOG_QUEUE = LogQueue("querylog", batch_window_s=0)
+LOG_QUEUE = LogQueue("requestlog", batch_window_s=0)
 
 def set_default_log_queue(log_queue: LogQueue):
     global LOG_QUEUE

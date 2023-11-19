@@ -81,7 +81,7 @@ def emergency_shutdown():
     get_default_log_queue().emergency_save_to_disk()
 
 
-def initialize(name="querylog", batch_window_s=0, load_emergency_saves=True, sink=None):
+def initialize(name="requestlog", batch_window_s=0, load_emergency_saves=True, sink=None):
     """Initialize the global log record.
 
     Configures the name and batch window, and loads old records saved by
