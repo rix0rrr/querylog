@@ -96,6 +96,18 @@ class LogRecord:
         self.inc(name + "_ms", time_ms)
         self.inc(name + "_cnt")
 
+    def log_time(self, name):
+        """Alias for 'timer'."""
+        return self.timer(name)
+
+    def log_counter(self, name, amount=1):
+        """Alias for 'inc'."""
+        return self.inc(name, amount)
+
+    def log_counters(self, **kwargs):
+        """Alias for inc_all."""
+        return self.inc_all(**kwargs)
+
     def record_exception(self, exc):
         self.set(fault=1, error_class=get_full_class_name(exc), error_message=str(exc))
 
