@@ -67,6 +67,42 @@ with requestlog.begin_global_log_record():
         time.sleep(1)
 ```
 
+Decorator
+---------
+
+The library contains a `@timed` decorator that automatically logs a timer for
+every invocation of the function. For example:
+
+```py
+import requestlog
+
+import time
+
+@requestlog.timed
+def expensive_function():
+    # Do something that might take a long time
+    time.sleep(1)
+
+
+# In your regular code, just call the function
+with requestlog.begin_global_log_record():
+    expensive_function()
+```
+
+This will log a timer for every invocation of that function, i.e. log
+`expensive_function_cnt` and `expensive_function_ms` to account for the time
+spent in `expensive_function`.
+
+By default `@timed` will use the function name to log under. You can rename
+how the function invocation is logged using `@timed_as`.
+
+```py
+# Rename how this timer is logged
+@requestlog.timed_as('different_name')
+def other_function_that_does_complex_things():
+    time.sleep(1)
+```
+
 Automatically logged data
 -------------------------
 
